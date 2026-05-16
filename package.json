@@ -1,0 +1,57 @@
+{
+  "name": "react-native-accessibility-tabs",
+  "version": "0.1.0",
+  "description": "Properly accessible tab bar primitives for React Native (Fabric). Fixes iOS VoiceOver tab role announcements and Android position hints that React Native's built-in accessibilityRole=\"tablist\" gets wrong.",
+  "main": "lib/commonjs/index.js",
+  "module": "lib/module/index.js",
+  "types": "lib/typescript/src/index.d.ts",
+  "react-native": "src/index.ts",
+  "source": "src/index.ts",
+  "files": [
+    "src",
+    "lib",
+    "ios",
+    "RNAccessibilityTabs.podspec",
+    "react-native.config.js",
+    "!**/__tests__",
+    "!**/__fixtures__",
+    "!**/__mocks__",
+    "!**/.*"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --build",
+    "clean": "rm -rf lib"
+  },
+  "keywords": [
+    "react-native",
+    "accessibility",
+    "a11y",
+    "voiceover",
+    "talkback",
+    "tabs",
+    "tablist",
+    "tabbar",
+    "fabric",
+    "new-architecture"
+  ],
+  "repository": "https://github.com/bitron/react-native-accessibility-tabs",
+  "author": "bitron <info@bitron.hu>",
+  "license": "MIT",
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-native": ">=0.74.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "react": "18.3.1",
+    "react-native": "0.76.0",
+    "typescript": "^5.4.0"
+  },
+  "codegenConfig": {
+    "name": "RNAccessibilityTabsSpec",
+    "type": "components",
+    "jsSrcsDir": "src",
+    "includesGeneratedCode": false
+  }
+}

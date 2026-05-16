@@ -1,0 +1,22 @@
+node_modules/
+lib/
+*.log
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# iOS
+ios/build/
+ios/Pods/
+ios/*.xcworkspace
+ios/DerivedData/
+
+# Example app
+example/node_modules/
+example/ios/Pods/
+example/ios/build/
+example/ios/Podfile.lock
+example/android/.gradle/
+example/android/build/
+example/android/app/build/
