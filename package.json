@@ -35,7 +35,7 @@
     "fabric",
     "new-architecture"
   ],
-  "repository": "https://github.com/bitron/react-native-accessibility-tabs",
+  "repository": "https://github.com/oaron/react-native-accessibility-tabs",
   "author": "bitron <info@bitron.hu>",
   "license": "MIT",
   "peerDependencies": {
