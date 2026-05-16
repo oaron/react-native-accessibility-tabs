@@ -9,7 +9,9 @@
 
 using namespace facebook::react;
 
-@implementation RNAccessibleTabBarViewComponentView
+@implementation RNAccessibleTabBarViewComponentView {
+  BOOL _didEmitMountState;
+}
 
 + (ComponentDescriptorProvider)componentDescriptorProvider
 {
@@ -71,13 +73,19 @@ using namespace facebook::react;
 // Native RCTLogWarn doesn't reliably forward to Metro in bridgeless mode
 // (Expo SDK 54 / RN 0.81), so we emit the state as a JS event instead — that
 // always rides the standard React event channel and reaches the JS console.
+// Retries each layout pass until _eventEmitter is non-null (Fabric sets it
+// via updateEventEmitter, which may run *after* the first layoutSubviews).
 - (void)layoutSubviews
 {
   [super layoutSubviews];
-  static dispatch_once_t once;
-  dispatch_once(&once, ^{
-    [self emitMountState];
-  });
+  if (_didEmitMountState) {
+    return;
+  }
+  if (_eventEmitter == nullptr) {
+    return;
+  }
+  _didEmitMountState = YES;
+  [self emitMountState];
 }
 
 - (void)emitMountState

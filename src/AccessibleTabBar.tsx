@@ -28,12 +28,21 @@ export const AccessibleTabBar: React.FC<AccessibleTabBarProps> = ({
   children,
   ...rest
 }) => {
+  React.useEffect(() => {
+    if (debug) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        `[AccessibleTabBar JS] mount v0.1.6 platform=${Platform.OS} label='${label}'`,
+      );
+    }
+  }, [debug, label]);
+
   if (Platform.OS === 'ios') {
     const onMountState = debug
       ? (e: NativeSyntheticEvent<AccessibleTabBarStateEvent>) => {
           // eslint-disable-next-line no-console
           console.warn(
-            '[AccessibleTabBar] native state:',
+            '[AccessibleTabBar native]',
             JSON.stringify(e.nativeEvent),
           );
         }
