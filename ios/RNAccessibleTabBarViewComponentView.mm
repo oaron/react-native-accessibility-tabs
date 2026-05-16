@@ -10,12 +10,7 @@
 
 using namespace facebook::react;
 
-// Toggle this to NO before publishing a non-debug release.
-static const BOOL kAccessibleTabBarDebugOverlay = YES;
-
-@implementation RNAccessibleTabBarViewComponentView {
-  UILabel *_debugOverlay;
-}
+@implementation RNAccessibleTabBarViewComponentView
 
 + (ComponentDescriptorProvider)componentDescriptorProvider
 {
@@ -27,20 +22,6 @@ static const BOOL kAccessibleTabBarDebugOverlay = YES;
   if (self = [super initWithFrame:frame]) {
     static const auto defaultProps = std::make_shared<const RNAccessibleTabBarViewProps>();
     _props = defaultProps;
-
-    if (kAccessibleTabBarDebugOverlay) {
-      _debugOverlay = [[UILabel alloc] init];
-      _debugOverlay.numberOfLines = 0;
-      _debugOverlay.font = [UIFont monospacedSystemFontOfSize:9 weight:UIFontWeightRegular];
-      _debugOverlay.textColor = [UIColor whiteColor];
-      _debugOverlay.backgroundColor = [UIColor colorWithRed:0.8 green:0 blue:0 alpha:0.85];
-      _debugOverlay.textAlignment = NSTextAlignmentLeft;
-      _debugOverlay.accessibilityElementsHidden = YES;
-      _debugOverlay.isAccessibilityElement = NO;
-      _debugOverlay.userInteractionEnabled = NO;
-      _debugOverlay.text = @"v0.1.3 init";
-      [self addSubview:_debugOverlay];
-    }
   }
   return self;
 }
@@ -75,9 +56,6 @@ static const BOOL kAccessibleTabBarDebugOverlay = YES;
 - (void)collectAccessibleChildrenFrom:(UIView *)view into:(NSMutableArray *)elements
 {
   for (UIView *subview in view.subviews) {
-    if (subview == _debugOverlay) {
-      continue;
-    }
     if (subview.isHidden || subview.accessibilityElementsHidden) {
       continue;
     }
@@ -89,50 +67,32 @@ static const BOOL kAccessibleTabBarDebugOverlay = YES;
   }
 }
 
-#pragma mark - Debug
+#pragma mark - Debug logging
 
+// Bridgeless / Fabric routing: RCTLogWarn forwards to Metro reliably; RCTLogInfo
+// gets filtered in some Expo SDK 54 configs. Use Warn so we definitely see it.
 - (void)layoutSubviews
 {
   [super layoutSubviews];
 
-  if (kAccessibleTabBarDebugOverlay) {
-    _debugOverlay.frame = CGRectMake(0, 0, self.bounds.size.width, 80);
-    [self bringSubviewToFront:_debugOverlay];
-    [self refreshDebugOverlay];
-  }
-
   static dispatch_once_t once;
   dispatch_once(&once, ^{
-    RCTLogWarn(@"[AccessibleTabBar] v0.1.3 first layout — class=%@ subviews=%lu label='%@' traits=0x%llx elem=%d",
+    NSMutableArray *walked = [NSMutableArray array];
+    [self collectAccessibleChildrenFrom:self into:walked];
+
+    RCTLogWarn(@"[AccessibleTabBar] v0.1.4 STATE class=%@ isAccessibilityElement=%d traits=0x%llx (tabBar=0x%llx) containerType=%ld label='%@' subviews=%lu walked-children=%lu",
                NSStringFromClass(self.class),
-               (unsigned long)self.subviews.count,
-               self.accessibilityLabel ?: @"(nil)",
+               self.isAccessibilityElement,
                (unsigned long long)self.accessibilityTraits,
-               self.isAccessibilityElement);
+               (unsigned long long)UIAccessibilityTraitTabBar,
+               (long)self.accessibilityContainerType,
+               self.accessibilityLabel ?: @"(nil)",
+               (unsigned long)self.subviews.count,
+               (unsigned long)walked.count);
+
+    RCTLogWarn(@"[AccessibleTabBar] v0.1.4 TREE follows:");
     [self dumpTreeFrom:self depth:0];
   });
-}
-
-- (void)refreshDebugOverlay
-{
-  if (!_debugOverlay) {
-    return;
-  }
-  NSMutableArray *walked = [NSMutableArray array];
-  [self collectAccessibleChildrenFrom:self into:walked];
-  _debugOverlay.text = [NSString stringWithFormat:
-      @"v0.1.3  class=%@\n"
-      @"isAccessibilityElement=%d\n"
-      @"traits=0x%llx (tabBar=0x%llx)\n"
-      @"label='%@'\n"
-      @"subviews=%lu  walked-children=%lu",
-      NSStringFromClass(self.class),
-      self.isAccessibilityElement,
-      (unsigned long long)self.accessibilityTraits,
-      (unsigned long long)UIAccessibilityTraitTabBar,
-      self.accessibilityLabel ?: @"(nil)",
-      (unsigned long)self.subviews.count,
-      (unsigned long)walked.count];
 }
 
 - (void)dumpTreeFrom:(UIView *)view depth:(NSInteger)depth
@@ -150,9 +110,6 @@ static const BOOL kAccessibleTabBarDebugOverlay = YES;
     return;
   }
   for (UIView *child in view.subviews) {
-    if (child == _debugOverlay) {
-      continue;
-    }
     [self dumpTreeFrom:child depth:depth + 1];
   }
 }
