@@ -61,5 +61,8 @@
     "type": "components",
     "jsSrcsDir": "src",
     "includesGeneratedCode": false
+  },
+  "dependencies": {
+    "react-native-accessibility-tabs": "github:oaron/react-native-accessibility-tabs#v0.1.4"
   }
 }
