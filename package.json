@@ -1,6 +1,6 @@
 {
   "name": "react-native-accessibility-tabs",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Properly accessible tab bar primitives for React Native (Fabric). Fixes iOS VoiceOver tab role announcements and Android position hints that React Native's built-in accessibilityRole=\"tablist\" gets wrong.",
   "main": "src/index.ts",
   "types": "src/index.ts",
