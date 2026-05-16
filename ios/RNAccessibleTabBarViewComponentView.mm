@@ -10,7 +10,12 @@
 
 using namespace facebook::react;
 
-@implementation RNAccessibleTabBarViewComponentView
+// Toggle this to NO before publishing a non-debug release.
+static const BOOL kAccessibleTabBarDebugOverlay = YES;
+
+@implementation RNAccessibleTabBarViewComponentView {
+  UILabel *_debugOverlay;
+}
 
 + (ComponentDescriptorProvider)componentDescriptorProvider
 {
@@ -22,16 +27,25 @@ using namespace facebook::react;
   if (self = [super initWithFrame:frame]) {
     static const auto defaultProps = std::make_shared<const RNAccessibleTabBarViewProps>();
     _props = defaultProps;
+
+    if (kAccessibleTabBarDebugOverlay) {
+      _debugOverlay = [[UILabel alloc] init];
+      _debugOverlay.numberOfLines = 0;
+      _debugOverlay.font = [UIFont monospacedSystemFontOfSize:9 weight:UIFontWeightRegular];
+      _debugOverlay.textColor = [UIColor whiteColor];
+      _debugOverlay.backgroundColor = [UIColor colorWithRed:0.8 green:0 blue:0 alpha:0.85];
+      _debugOverlay.textAlignment = NSTextAlignmentLeft;
+      _debugOverlay.accessibilityElementsHidden = YES;
+      _debugOverlay.isAccessibilityElement = NO;
+      _debugOverlay.userInteractionEnabled = NO;
+      _debugOverlay.text = @"v0.1.3 init";
+      [self addSubview:_debugOverlay];
+    }
   }
   return self;
 }
 
 #pragma mark - Accessibility (getter overrides)
-
-// All accessibility behavior must be expressed via getter overrides so nothing the
-// Fabric base RCTViewComponentView does in its prop pipeline (recomputing traits
-// from accessibilityRole, flipping isAccessibilityElement when label is set) can
-// clobber it after init.
 
 - (BOOL)isAccessibilityElement
 {
@@ -51,26 +65,20 @@ using namespace facebook::react;
   return UIAccessibilityContainerTypeNone;
 }
 
-// Depth-first walk over the actual mounted subview tree. Fabric mounts children
-// into self.subviews (via mountChildComponentView:index:), so this picks up
-// TouchableOpacity / Pressable views with their accessibility props applied.
 - (NSArray *)accessibilityElements
 {
   NSMutableArray *elements = [NSMutableArray array];
   [self collectAccessibleChildrenFrom:self into:elements];
-  if (elements.count == 0) {
-    return nil;
-  }
-  return elements;
+  return elements.count > 0 ? elements : nil;
 }
 
 - (void)collectAccessibleChildrenFrom:(UIView *)view into:(NSMutableArray *)elements
 {
   for (UIView *subview in view.subviews) {
-    if (subview.isHidden || subview.accessibilityElementsHidden) {
+    if (subview == _debugOverlay) {
       continue;
     }
-    if (subview == self) {
+    if (subview.isHidden || subview.accessibilityElementsHidden) {
       continue;
     }
     if (subview.isAccessibilityElement || subview.accessibilityLabel.length > 0) {
@@ -83,22 +91,48 @@ using namespace facebook::react;
 
 #pragma mark - Debug
 
-// One-shot subview-tree dump after first layout. Useful when the accessibility
-// tree disagrees with what the consumer expects (e.g. children not focusable,
-// container swallowing label). Visible in Xcode console / Metro logs.
 - (void)layoutSubviews
 {
   [super layoutSubviews];
+
+  if (kAccessibleTabBarDebugOverlay) {
+    _debugOverlay.frame = CGRectMake(0, 0, self.bounds.size.width, 80);
+    [self bringSubviewToFront:_debugOverlay];
+    [self refreshDebugOverlay];
+  }
+
   static dispatch_once_t once;
   dispatch_once(&once, ^{
-    RCTLogInfo(@"[AccessibleTabBar] first layout — subview tree of %@:", NSStringFromClass(self.class));
-    [self dumpTreeFrom:self depth:0];
-    RCTLogInfo(@"[AccessibleTabBar] self.isAccessibilityElement = %d, traits = 0x%llx, containerType = %ld, label = '%@'",
-               self.isAccessibilityElement,
+    RCTLogWarn(@"[AccessibleTabBar] v0.1.3 first layout — class=%@ subviews=%lu label='%@' traits=0x%llx elem=%d",
+               NSStringFromClass(self.class),
+               (unsigned long)self.subviews.count,
+               self.accessibilityLabel ?: @"(nil)",
                (unsigned long long)self.accessibilityTraits,
-               (long)self.accessibilityContainerType,
-               self.accessibilityLabel ?: @"(nil)");
+               self.isAccessibilityElement);
+    [self dumpTreeFrom:self depth:0];
   });
+}
+
+- (void)refreshDebugOverlay
+{
+  if (!_debugOverlay) {
+    return;
+  }
+  NSMutableArray *walked = [NSMutableArray array];
+  [self collectAccessibleChildrenFrom:self into:walked];
+  _debugOverlay.text = [NSString stringWithFormat:
+      @"v0.1.3  class=%@\n"
+      @"isAccessibilityElement=%d\n"
+      @"traits=0x%llx (tabBar=0x%llx)\n"
+      @"label='%@'\n"
+      @"subviews=%lu  walked-children=%lu",
+      NSStringFromClass(self.class),
+      self.isAccessibilityElement,
+      (unsigned long long)self.accessibilityTraits,
+      (unsigned long long)UIAccessibilityTraitTabBar,
+      self.accessibilityLabel ?: @"(nil)",
+      (unsigned long)self.subviews.count,
+      (unsigned long)walked.count];
 }
 
 - (void)dumpTreeFrom:(UIView *)view depth:(NSInteger)depth
@@ -106,7 +140,7 @@ using namespace facebook::react;
   NSString *pad = [@"" stringByPaddingToLength:(NSUInteger)depth * 2
                                    withString:@" "
                               startingAtIndex:0];
-  RCTLogInfo(@"[AccessibleTabBar] %@%@ a11yElem=%d label='%@' traits=0x%llx",
+  RCTLogWarn(@"[AccessibleTabBar] %@%@ a11yElem=%d label='%@' traits=0x%llx",
              pad,
              NSStringFromClass(view.class),
              view.isAccessibilityElement,
@@ -116,6 +150,9 @@ using namespace facebook::react;
     return;
   }
   for (UIView *child in view.subviews) {
+    if (child == _debugOverlay) {
+      continue;
+    }
     [self dumpTreeFrom:child depth:depth + 1];
   }
 }
