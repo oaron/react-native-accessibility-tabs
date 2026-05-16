@@ -1,6 +1,5 @@
 #import "RNAccessibleTabBarViewComponentView.h"
 
-#import <React/RCTLog.h>
 #import <react/renderer/components/RNAccessibilityTabsSpec/ComponentDescriptors.h>
 #import <react/renderer/components/RNAccessibilityTabsSpec/EventEmitters.h>
 #import <react/renderer/components/RNAccessibilityTabsSpec/Props.h>
@@ -67,51 +66,40 @@ using namespace facebook::react;
   }
 }
 
-#pragma mark - Debug logging
+#pragma mark - Debug (event to JS)
 
-// Bridgeless / Fabric routing: RCTLogWarn forwards to Metro reliably; RCTLogInfo
-// gets filtered in some Expo SDK 54 configs. Use Warn so we definitely see it.
+// Native RCTLogWarn doesn't reliably forward to Metro in bridgeless mode
+// (Expo SDK 54 / RN 0.81), so we emit the state as a JS event instead — that
+// always rides the standard React event channel and reaches the JS console.
 - (void)layoutSubviews
 {
   [super layoutSubviews];
-
   static dispatch_once_t once;
   dispatch_once(&once, ^{
-    NSMutableArray *walked = [NSMutableArray array];
-    [self collectAccessibleChildrenFrom:self into:walked];
-
-    RCTLogWarn(@"[AccessibleTabBar] v0.1.4 STATE class=%@ isAccessibilityElement=%d traits=0x%llx (tabBar=0x%llx) containerType=%ld label='%@' subviews=%lu walked-children=%lu",
-               NSStringFromClass(self.class),
-               self.isAccessibilityElement,
-               (unsigned long long)self.accessibilityTraits,
-               (unsigned long long)UIAccessibilityTraitTabBar,
-               (long)self.accessibilityContainerType,
-               self.accessibilityLabel ?: @"(nil)",
-               (unsigned long)self.subviews.count,
-               (unsigned long)walked.count);
-
-    RCTLogWarn(@"[AccessibleTabBar] v0.1.4 TREE follows:");
-    [self dumpTreeFrom:self depth:0];
+    [self emitMountState];
   });
 }
 
-- (void)dumpTreeFrom:(UIView *)view depth:(NSInteger)depth
+- (void)emitMountState
 {
-  NSString *pad = [@"" stringByPaddingToLength:(NSUInteger)depth * 2
-                                   withString:@" "
-                              startingAtIndex:0];
-  RCTLogWarn(@"[AccessibleTabBar] %@%@ a11yElem=%d label='%@' traits=0x%llx",
-             pad,
-             NSStringFromClass(view.class),
-             view.isAccessibilityElement,
-             view.accessibilityLabel ?: @"",
-             (unsigned long long)view.accessibilityTraits);
-  if (depth > 12) {
+  if (_eventEmitter == nullptr) {
     return;
   }
-  for (UIView *child in view.subviews) {
-    [self dumpTreeFrom:child depth:depth + 1];
-  }
+  NSMutableArray *walked = [NSMutableArray array];
+  [self collectAccessibleChildrenFrom:self into:walked];
+
+  NSString *traitsHex = [NSString stringWithFormat:@"0x%llx", (unsigned long long)self.accessibilityTraits];
+  NSString *labelStr = self.accessibilityLabel ?: @"";
+
+  auto emitter = std::static_pointer_cast<const RNAccessibleTabBarViewEventEmitter>(_eventEmitter);
+  emitter->onMountState({
+    .isAccessibilityElement = static_cast<bool>(self.isAccessibilityElement),
+    .accessibilityLabel = std::string(labelStr.UTF8String ?: ""),
+    .accessibilityTraits = std::string(traitsHex.UTF8String ?: ""),
+    .containerType = static_cast<int>(self.accessibilityContainerType),
+    .subviewCount = static_cast<int>(self.subviews.count),
+    .walkedChildrenCount = static_cast<int>(walked.count),
+  });
 }
 
 @end
