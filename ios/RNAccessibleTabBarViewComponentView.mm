@@ -54,13 +54,18 @@ using namespace facebook::react;
   return elements.count > 0 ? elements : nil;
 }
 
+// Match only `isAccessibilityElement=YES`. Including views that merely have an
+// `accessibilityLabel` is unsafe — Fabric's `RCTViewComponentView.accessibilityLabel`
+// getter recursively concatenates descendant labels when the view is itself an
+// accessibility element, so intermediate wrappers can spuriously short-circuit
+// the walk.
 - (void)collectAccessibleChildrenFrom:(UIView *)view into:(NSMutableArray *)elements
 {
   for (UIView *subview in view.subviews) {
     if (subview.isHidden || subview.accessibilityElementsHidden) {
       continue;
     }
-    if (subview.isAccessibilityElement || subview.accessibilityLabel.length > 0) {
+    if (subview.isAccessibilityElement) {
       [elements addObject:subview];
     } else {
       [self collectAccessibleChildrenFrom:subview into:elements];
