@@ -20,8 +20,10 @@ Background: Vispero/TPGI — <https://vispero.com/resources/mobile-tabs-part-2-r
 
 ## Install
 
+Not yet published to npm — install from GitHub:
+
 ```bash
-npm install react-native-accessibility-tabs
+npm install github:oaron/react-native-accessibility-tabs#v1.0.0
 cd ios && pod install
 ```
 
