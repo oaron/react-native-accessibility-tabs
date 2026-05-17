@@ -1,8 +1,6 @@
 import React from 'react';
-import { Platform, View, type ViewProps, type NativeSyntheticEvent } from 'react-native';
-import RNAccessibleTabBarView, {
-  type AccessibleTabBarStateEvent,
-} from './AccessibleTabBarNativeComponent';
+import { Platform, View, type ViewProps } from 'react-native';
+import RNAccessibleTabBarView from './AccessibleTabBarNativeComponent';
 
 export interface AccessibleTabBarProps extends Omit<ViewProps, 'accessibilityRole'> {
   /**
@@ -15,8 +13,8 @@ export interface AccessibleTabBarProps extends Omit<ViewProps, 'accessibilityRol
    */
   label: string;
   /**
-   * Debug only: log the native view's accessibility state once after first mount.
-   * Useful when the announcement isn't what you expect.
+   * Debug only: log mount info to the Metro console. Useful when the announcement
+   * isn't what you expect.
    */
   debug?: boolean;
   children: React.ReactNode;
@@ -32,27 +30,14 @@ export const AccessibleTabBar: React.FC<AccessibleTabBarProps> = ({
     if (debug) {
       // eslint-disable-next-line no-console
       console.warn(
-        `[AccessibleTabBar JS] mount v0.1.6 platform=${Platform.OS} label='${label}'`,
+        `[AccessibleTabBar JS] mount v0.1.8 platform=${Platform.OS} label='${label}'`,
       );
     }
   }, [debug, label]);
 
   if (Platform.OS === 'ios') {
-    const onMountState = debug
-      ? (e: NativeSyntheticEvent<AccessibleTabBarStateEvent>) => {
-          // eslint-disable-next-line no-console
-          console.warn(
-            '[AccessibleTabBar native]',
-            JSON.stringify(e.nativeEvent),
-          );
-        }
-      : undefined;
     return (
-      <RNAccessibleTabBarView
-        accessibilityLabel={label}
-        onMountState={onMountState}
-        {...rest}
-      >
+      <RNAccessibleTabBarView accessibilityLabel={label} {...rest}>
         {children as React.ReactElement}
       </RNAccessibleTabBarView>
     );

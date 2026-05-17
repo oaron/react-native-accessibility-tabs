@@ -13,7 +13,8 @@ Pod::Spec.new do |s|
   s.platforms    = { :ios => "13.0" }
   s.source       = { :git => "#{package["repository"]}.git", :tag => "v#{s.version}" }
 
-  s.source_files = "ios/**/*.{h,m,mm}"
+  s.source_files = "ios/**/*.{h,m,mm,swift}"
+  s.swift_version = "5.0"
 
-  install_modules_dependencies(s)
+  s.dependency "React-Core"
 end
