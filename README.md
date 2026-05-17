@@ -1,19 +1,22 @@
 # react-native-accessibility-tabs
 
-Properly accessible tab bar primitives for React Native — fixes the iOS VoiceOver and Android TalkBack gaps that React Native's built-in `accessibilityRole="tablist"` falls into.
+Properly accessible tab bar primitives for React Native. Fixes the iOS VoiceOver and Android TalkBack gaps that React Native's documented `accessibilityRole="tablist"` cannot reach from JavaScript.
 
-Works with **legacy and new architecture** Expo / React Native apps. On new-arch, the legacy view manager is interop-wrapped by Fabric automatically.
+- **iOS:** native Swift `UIView` with `UIAccessibilityTraitTabBar`, `accessibilityContainerType = .semanticGroup`, and a recursive `accessibilityElements` walk that finds the actual tab buttons buried under RN's nested `RCTView` wrappers.
+- **Android:** native `ReactViewGroup` that sets `CollectionInfoCompat` on the container and `CollectionItemInfoCompat` on each tab descendant — so TalkBack gets the structural "1 of N" / "selected" context for free.
+- **Architecture-agnostic:** legacy bridge view manager, interop-wrapped automatically on new-arch (Fabric) apps. No codegen, no `RCT_NEW_ARCH_ENABLED` requirement.
+- **Navigator-agnostic:** works with React Navigation, Expo Router, `react-native-tab-view`, or hand-rolled `useState` tabs. The library only configures container traits and per-tab a11y props.
 
 ## Why this exists
 
 React Native's documented tab role behaves inconsistently in production:
 
-- **iOS VoiceOver** sometimes announces "tab" and sometimes nothing — there is no reliable way to express `UIAccessibilityTraitTabBar`, `accessibilityContainerType = .semanticGroup`, or a recursive `accessibilityElements` walk through React Native's deeply nested view hierarchy from JavaScript.
-- **Android TalkBack** has no automatic "1 of 5" position announcement, because RN does not expose `CollectionInfo` / `CollectionItemInfo` from `AccessibilityNodeInfo`.
+- **iOS VoiceOver** sometimes announces "tab" and sometimes nothing. There is no JS-level way to express `UIAccessibilityTraitTabBar`, `accessibilityContainerType = .semanticGroup`, or a recursive `accessibilityElements` walk through React Native's deeply nested view hierarchy.
+- **Android TalkBack** has no automatic "1 of 5" position announcement because RN does not expose `CollectionInfoCompat` / `CollectionItemInfoCompat` from `AccessibilityNodeInfo`.
 
-This package ships a native iOS `UIView` (Swift) that configures all three traits at the UIView level, plus a JavaScript hook that fills the Android position gap with `accessibilityHint`.
+This package ships the native pieces for both platforms.
 
-For background see Vispero/TPGI: <https://vispero.com/resources/mobile-tabs-part-2-react-native/>
+Background: Vispero/TPGI — <https://vispero.com/resources/mobile-tabs-part-2-react-native/>.
 
 ## Install
 
@@ -22,7 +25,7 @@ npm install react-native-accessibility-tabs
 cd ios && pod install
 ```
 
-`react-native >= 0.74`. Works without `RCT_NEW_ARCH_ENABLED`; on new arch the native view is interop-wrapped automatically.
+Peer dependencies: `react-native >= 0.74`, `react >= 18`. iOS 13+, Android `minSdkVersion >= 24` (Android API 24 / 7.0+). Both legacy and new architecture supported.
 
 ## Usage
 
@@ -63,55 +66,63 @@ function Tab({ label, index, total, selected, onPress }) {
 }
 ```
 
+The `label` is what VoiceOver announces when focus first enters the tab bar group on iOS. Localize it — there is no sensible cross-locale default (English "Tab bar", Hungarian "Lapsor", French "Onglet", …).
+
+**Do not** set `accessible={true}` on the wrapper or on any inner row View — that collapses the children into a single focus node and tab navigation breaks.
+
 ### `<AccessibleTabBar>`
 
-| Prop       | Type     | Required | Notes                                                                                                   |
-| ---------- | -------- | -------- | ------------------------------------------------------------------------------------------------------- |
-| `label`    | `string` | yes      | Localized container label. Announced by iOS VoiceOver when focus first enters the tab bar group.        |
-| `children` | node     | yes      | Your tab UI. The component does not render any tabs itself — it only configures container a11y traits. |
-| `debug`    | `boolean`| no       | Log a mount line to the Metro console.                                                                  |
+| Prop       | Type     | Required | Notes                                                                                              |
+| ---------- | -------- | -------- | -------------------------------------------------------------------------------------------------- |
+| `label`    | `string` | yes      | Localized container label. iOS VoiceOver announces it when focus first enters the tab bar group.   |
+| `children` | node     | yes      | Your tab UI. The component does not render any tabs itself — it only configures container traits.  |
+| `debug`    | `boolean`| no       | Log a mount line to the Metro console.                                                              |
 
 All other `ViewProps` (style, testID, etc.) are forwarded.
 
-**Do not** set `accessible={true}` on the wrapper or any inner row View — that collapses the children into a single focus node and the tab navigation breaks.
+### `useAccessibleTabProps({ index, total, selected, label, positionHint? })`
 
-### `useAccessibleTabProps({ index, total, selected, label })`
+Returns the platform-correct `accessibility*` props to spread onto each tab button.
 
-Returns the platform-correct `accessibility*` props to spread onto each tab button. On iOS, it omits `accessibilityRole` so the parent's `.tabBar` trait can propagate "Tab, X of Y" automatically. On Android, it sets `accessibilityRole="tab"` and emits a manual `${index+1}/${total}` hint.
+- **iOS:** omits `accessibilityRole` so the parent's `.tabBar` trait can propagate "Tab, X of Y" automatically.
+- **Android:** sets `accessibilityRole="tab"` and emits a manual `${index+1}/${total}` `accessibilityHint`. The native `CollectionItemInfo` already provides structural position to TalkBack; the manual hint is kept as an audible reinforcement that works on all TalkBack versions. Pass `positionHint: (i, n) => ''` to disable, or `positionHint: (i, n) => \`${i} of ${n}\`` to customize.
 
-Pass `positionHint: (i, n) => string` to localize the Android hint format.
-
-## What VoiceOver / TalkBack actually announce
+## What VoiceOver / TalkBack announce
 
 **iOS VoiceOver:**
-- On entering the tab bar group: speaks the `label` prop ("Tab bar", "Lapsor", …).
-- On each tab: speaks the tab's `accessibilityLabel`, then "Tab, X of Y", then selected state if applicable.
+- On entering the tab bar group: speaks the `label` prop.
+- On each tab: speaks the tab's `accessibilityLabel`, then "Tab, X of Y", then selected state.
 
 **Android TalkBack:**
-- On each tab: speaks the tab's label, then "Tab", then the manual position hint ("1/5"), then selected state.
-- The container `label` is accepted but **not** currently announced as a group label (Android needs native `CollectionInfo` wiring — planned for v0.2).
+- On each tab: speaks the tab's label, then "Tab", then the position hint, then selected state.
+- TalkBack uses the native `CollectionInfo` / `CollectionItemInfo` to provide structural context (single-selection collection of N items).
 
 ## Use with React Navigation
 
-The package is navigator-agnostic, but if you wire it into `@react-navigation/bottom-tabs`, the pattern looks like:
+The package is navigator-agnostic, but a common integration with `@react-navigation/bottom-tabs` is:
 
 ```tsx
 import { createBottomTabNavigator, type BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { AccessibleTabBar, useAccessibleTabProps } from 'react-native-accessibility-tabs';
 
 function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
   return (
     <AccessibleTabBar label="Tab bar">
       <View style={{ flexDirection: 'row' }}>
-        {state.routes.map((route, index) => (
-          <Tab
-            key={route.key}
-            label={descriptors[route.key].options.title ?? route.name}
-            index={index}
-            total={state.routes.length}
-            selected={index === state.index}
-            onPress={() => navigation.navigate(route.name)}
-          />
-        ))}
+        {state.routes.map((route, index) => {
+          const label = descriptors[route.key].options.title ?? route.name;
+          const selected = index === state.index;
+          const a11yProps = useAccessibleTabProps({ index, total: state.routes.length, selected, label });
+          return (
+            <TouchableOpacity
+              key={route.key}
+              onPress={() => navigation.navigate(route.name)}
+              {...a11yProps}
+            >
+              <Text accessible={false} importantForAccessibility="no">{label}</Text>
+            </TouchableOpacity>
+          );
+        })}
       </View>
     </AccessibleTabBar>
   );
@@ -122,11 +133,7 @@ function CustomTabBar({ state, descriptors, navigation }: BottomTabBarProps) {
 </Tab.Navigator>
 ```
 
-Pass the `tabBar` prop as a **render function**, not a component reference — RN-nav invokes the function as `tabBar(props)`, so passing the component bypasses React render and hooks fail with "Invalid hook call".
-
-## Known gaps
-
-- Android `CollectionInfo` / `CollectionItemInfo` is not yet wired natively — Android container label and automatic position counting are absent. Planned for v0.2.
+Pass the `tabBar` prop as a **render function**, not a component reference. RN-nav invokes it as `tabBar(props)`, and passing the component bypasses React render — hooks then fail with "Invalid hook call".
 
 ## License
 

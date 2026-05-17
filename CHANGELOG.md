@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0]
+
+### Added
+- Android: native `ReactViewGroup` that sets `CollectionInfoCompat` on the tab bar container and `CollectionItemInfoCompat` on each tab descendant. TalkBack now gets structural position / selection context, in addition to the JS-side `accessibilityHint` reinforcement.
+- Android: native package + view manager + `react-native.config.js` autolink entry (`packageInstance`).
+- Public API marked stable.
+
+### Notes
+- iOS path unchanged from 0.1.8 (Swift `UIView` + legacy bridge view manager).
+- No JS-side API breakage. Existing 0.1.8 consumers can bump without code changes.
+
 ## [0.1.8]
 
 ### Changed (breaking — install path / arch)

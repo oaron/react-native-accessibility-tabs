@@ -2,7 +2,10 @@ module.exports = {
   dependency: {
     platforms: {
       ios: {},
-      android: null,
+      android: {
+        packageImportPath: 'import com.bitron.accessibilitytabs.RNAccessibleTabBarPackage;',
+        packageInstance: 'new RNAccessibleTabBarPackage()',
+      },
     },
   },
 };

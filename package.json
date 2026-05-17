@@ -1,7 +1,7 @@
 {
   "name": "react-native-accessibility-tabs",
-  "version": "0.1.8",
-  "description": "Properly accessible tab bar primitives for React Native. Fixes iOS VoiceOver tab role announcements and Android position hints that React Native's built-in accessibilityRole=\"tablist\" gets wrong.",
+  "version": "1.0.0",
+  "description": "Accessible tab bar primitives for React Native. Adds the iOS UIAccessibilityTraitTabBar trait, accessibilityContainerType=semanticGroup, and Android CollectionInfo/CollectionItemInfo that React Native's built-in accessibilityRole=\"tablist\" cannot express from JS.",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "react-native": "src/index.ts",
@@ -19,6 +19,7 @@
     "src",
     "lib",
     "ios",
+    "android",
     "RNAccessibilityTabs.podspec",
     "react-native.config.js",
     "!**/__tests__",
@@ -39,9 +40,7 @@
     "talkback",
     "tabs",
     "tablist",
-    "tabbar",
-    "fabric",
-    "new-architecture"
+    "tabbar"
   ],
   "repository": "https://github.com/oaron/react-native-accessibility-tabs",
   "author": "bitron <info@bitron.hu>",
